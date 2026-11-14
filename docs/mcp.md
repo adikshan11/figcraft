@@ -94,8 +94,14 @@ Each may be given more than once, as `--flag DIR` or `--flag=DIR`:
   (writing through it would create its target, wherever that is). A path outside the roots gets
   the same refusal whatever exists there, so a refusal doesn't tell what is outside. Folders are
   compared by whole names: `/work2/x` is not inside `/work`. On Windows the case comes from the disk (`C:\WORK\x` is
-  inside `C:\work`), `\\?\` and UNC (`\\server\share\…`) paths are resolved like drive-letter ones,
-  and new names that are devices (`CON`, `NUL`, `COM1`…) or streams (`a.png:x`) are refused.
+  inside `C:\work`), `\\?\C:\…` paths are resolved like drive-letter ones, and
+  new names that are devices (`CON`, `NUL`, `COM1`…) or streams (`a.png:x`) are refused.
+  A path on another computer (`\\server\share\…`, `\\?\UNC\…`, WebDAV's `\\host@SSL\share\…`) or a device
+  path (`\\.\pipe\…`, `\\?\GLOBALROOT\…`) is refused by its spelling before anything looks it up, since looking
+  it up would contact that host, unless a root is on the same share; a link whose target is one of those is
+  refused too. A local volume's `\\?\Volume{…}\` path is let through. A link whose text is a native NT name
+  (`\Device\…`, `\??\…`, `\GLOBAL??\…`) is refused as a device path, and so is a name that ends in a period or a space, in a
+  path or as a link's target, since Windows trims it where it looks a name up. The check and the open are two steps on a name, so a link put in place between them is not seen: this is a known residual risk of path-based confinement, and closing it means opening every folder by a handle and working relative to it. Until then, keep a host from being contacted at all: block outbound SMB (TCP 445) and WebDAV from the machine or account that runs the server, and set the Windows policy "Restrict NTLM: Outgoing NTLM traffic to remote servers" to deny, so no credentials leave even if a link is swapped in time.
 - **The network:** a confined call reaches no FigCraft or plugin server, so it can't send a
   document anywhere through one. Hosting, joining, publishing and sharing a file (`collab.host`,
   `collab.join`, `collab.publish`, `collab.share` …), team libraries on a server (`library.check`
